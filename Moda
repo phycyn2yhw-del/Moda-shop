@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MODA — Магазин одежды</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fafafa; color: #1a1a1a; }
+  header { position: sticky; top: 0; background: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06); z-index: 100; }
+  .logo { font-size: 24px; font-weight: 800; letter-spacing: 3px; }
+  .cart-btn { background: #1a1a1a; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+  .cart-btn:hover { background: #333; }
+  .hero { background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%); color: #fff; padding: 80px 24px; text-align: center; }
+  .hero h1 { font-size: 48px; margin-bottom: 16px; letter-spacing: 2px; }
+  .hero p { font-size: 18px; opacity: 0.85; }
+  .filters { display: flex; gap: 10px; padding: 24px; flex-wrap: wrap; justify-content: center; }
+  .filter-btn { padding: 8px 18px; border: 1px solid #ccc; background: #fff; border-radius: 20px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+  .filter-btn.active, .filter-btn:hover { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform 0.2s; }
+  .card:hover { transform: translateY(-4px); }
+  .card img { width: 100%; height: 300px; object-fit: cover; background: #eee; }
+  .card-body { padding: 16px; }
+  .card-body h3 { font-size: 16px; margin-bottom: 8px; }
+  .price { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 12px; }
+  .add-btn { width: 100%; padding: 10px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .add-btn:hover { background: #333; }
+  .cart-panel { position: fixed; right: -400px; top: 0; width: 380px; height: 100vh; background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,0.15); transition: right 0.3s; z-index: 200; display: flex; flex-direction: column; }
+  .cart-panel.open { right: 0; }
+  .cart-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .cart-items { flex: 1; overflow-y: auto; padding: 16px; }
+  .cart-item { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+  .cart-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+  .cart-item-info { flex: 1; font-size: 14px; }
+  .cart-item-info .qty { color: #888; font-size: 12px; }
+  .remove-btn { background: none; border: none; color: #c00; cursor: pointer; font-size: 18px; }
+  .cart-footer { padding: 20px; border-top: 1px solid #eee; }
+  .total { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+  .checkout-btn { width: 100%; padding: 14px; background: #25D366; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .checkout-btn:hover { background: #1ebe5b; }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: 0.3s; z-index: 150; }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+  footer { text-align: center; padding: 40px 24px; color: #888; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MODA</div>
+  <button class="cart-btn" onclick="toggleCart()">Корзина (<span id="cartCount">0</span>)</button>
+</header>
+
+<section class="hero">
+  <h1>Новая коллекция</h1>
+  <p>Стиль, который говорит за тебя</p>
+</section>
+
+<div class="filters" id="filters">
+  <button class="filter-btn active" data-cat="all">Все</button>
+  <button class="filter-btn" data-cat="men">Мужское</button>
+  <button class="filter-btn" data-cat="women">Женское</button>
+  <button class="filter-btn" data-cat="acc">Аксессуары</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="overlay" id="overlay" onclick="toggleCart()"></div>
+
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <h2>Корзина</h2>
+    <button class="close-btn" onclick="toggleCart()">×</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="total">Итого: <span id="total">0</span> ₽</div>
+    <button class="checkout-btn" onclick="checkout()">Оформить через WhatsApp</button>
+  </div>
+</div>
+
+<footer>© 2026 MODA — Магазин одежды. Все права защищены.</footer>
+
+<script>
+const products = [
+  { id: 1, name: "Худи Oversize", price: 4500, cat: "men", img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=600" },
+  { id: 2, name: "Джинсы Slim", price: 5200, cat: "men", img: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600" },
+  { id: 3, name: "Платье миди", price: 6800, cat: "women", img: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600" },
+  { id: 4, name: "Топ кроп", price: 2900, cat: "women", img: "https://images.unsplash.com/photo-1564257631407-4deb1f99d992?w=600" },
+  { id: 5, name: "Кепка", price: 1900, cat: "acc", img: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600" },
+  { id: 6, name: "Сумка кожаная", price: 7500, cat: "acc", img: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600" },
+  { id: 7, name: "Куртка джинсовая", price: 8900, cat: "men", img: "https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=600" },
+  { id: 8, name: "Юбка плиссе", price: 4100, cat: "women", img: "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=600" }
+];
+
+let cart = [];
+const WHATSAPP_NUMBER = "79310049939";
+
+function render(cat = "all") {
+  const grid = document.getElementById("grid");
+  const list = cat === "all" ? products : products.filter(p => p.cat === cat);
+  grid.innerHTML = list.map(p => `
+    <div class="card">
+      <img src="${p.img}" alt="${p.name}" loading="lazy">
+      <div class="card-body">
+        <h3>${p.name}</h3>
+        <div class="price">${p.price.toLocaleString()} ₽</div>
+        <button class="add-btn" onclick="addToCart(${p.id})">В корзину</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function addToCart(id) {
+  const item = cart.find(i => i.id === id);
+  if (item) item.qty++;
+  else {
+    const p = products.find(p => p.id === id);
+    cart.push({ ...p, qty: 1 });
+  }
+  updateCart();
+  toggleCart(true);
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(i => i.id !== id);
+  updateCart();
+}
+
+function updateCart() {
+  const count = cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById("cartCount").textContent = count;
+  const items = document.getElementById("cartItems");
+  if (cart.length === 0) {
+    items.innerHTML = "<p style='color:#888;text-align:center;padding:40px 0'>Корзина пуста</p>";
+  } else {
+    items.innerHTML = cart.map(i => `
+      <div class="cart-item">
+        <img src="${i.img}" alt="${i.name}">
+        <div class="cart-item-info">
+          <div>${i.name}</div>
+          <div class="qty">${i.qty} шт × ${i.price.toLocaleString()} ₽</div>
+        </div>
+        <button class="remove-btn" onclick="removeFromCart(${i.id})">×</button>
+      </div>
+    `).join("");
+  }
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  document.getElementById("total").textContent = total.toLocaleString();
+}
+
+function toggleCart(force) {
+  const panel = document.getElementById("cartPanel");
+  const overlay = document.getElementById("overlay");
+  const open = force === true ? true : !panel.classList.contains("open");
+  panel.classList.toggle("open", open);
+  overlay.classList.toggle("open", open);
+}
+
+function checkout() {
+  if (cart.length === 0) { alert("Корзина пуста"); return; }
+  let text = "Заказ:%0A";
+  cart.forEach(i => { text += `- ${i.name} × ${i.qty} = ${(i.price * i.qty).toLocaleString()} ₽%0A`; });
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  text += `%0AИтого: ${total.toLocaleString()} ₽`;
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, "_blank");
+}
+
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    render(btn.dataset.cat);
+  });
+});
+
+render();
+updateCart();
+</script>
+</body>
+</html>
